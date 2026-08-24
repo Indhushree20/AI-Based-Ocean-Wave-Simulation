@@ -1,0 +1,1340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Based Ocean Wave Simulation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Work+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --deep:#03202E;
+    --ocean:#0A3F58;
+    --ocean-2:#0E5978;
+    --surface:#0C3448;
+    --surface-2:#123F55;
+    --cyan:#2FE3F0;
+    --cyan-dim:#1AA9B8;
+    --green:#3BDCA0;
+    --yellow:#F5C242;
+    --red:#F0665A;
+    --white:#EAF7FB;
+    --white-dim:#AFCBD6;
+    --line:rgba(234,247,251,0.10);
+    --font-display:'Space Grotesk', sans-serif;
+    --font-body:'Work Sans', sans-serif;
+    --font-mono:'JetBrains Mono', monospace;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(ellipse 900px 500px at 15% -10%, rgba(47,227,240,0.12), transparent 60%),
+      radial-gradient(ellipse 700px 500px at 100% 0%, rgba(59,220,160,0.08), transparent 55%),
+      linear-gradient(180deg, var(--deep), #021620 70%, #010e15);
+    color:var(--white);
+    font-family:var(--font-body);
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--cyan); color:#03202E;}
+
+  a{color:var(--cyan);}
+
+  .wrap{max-width:1180px; margin:0 auto; padding:0 20px 80px;}
+
+  /* ---------- badge ---------- */
+  .proto-badge{
+    position:sticky; top:0; z-index:50;
+    background:linear-gradient(90deg, #08222f, #0b3345 60%, #08222f);
+    border-bottom:1px solid var(--line);
+    text-align:center;
+    padding:8px 12px;
+    font-family:var(--font-mono);
+    font-size:12px;
+    letter-spacing:.06em;
+    color:var(--cyan);
+  }
+  .proto-badge b{color:var(--white); font-weight:600;}
+
+  /* ---------- header ---------- */
+  header.hero{
+    padding:64px 0 40px;
+    position:relative;
+    overflow:hidden;
+  }
+  .eyebrow{
+    display:inline-flex; align-items:center; gap:8px;
+    font-family:var(--font-mono);
+    font-size:12px; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--cyan-dim);
+    border:1px solid rgba(47,227,240,0.3);
+    padding:6px 12px; border-radius:100px;
+    background:rgba(47,227,240,0.05);
+  }
+  .eyebrow .dot{width:6px;height:6px;border-radius:50%;background:var(--green); box-shadow:0 0 8px var(--green);}
+  h1.title{
+    font-family:var(--font-display);
+    font-weight:700;
+    font-size:clamp(34px,6vw,58px);
+    line-height:1.02;
+    margin:18px 0 6px;
+    background:linear-gradient(90deg, var(--white) 30%, var(--cyan) 90%);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  .subtitle{
+    font-family:var(--font-display);
+    font-weight:500;
+    font-size:clamp(15px,2.4vw,20px);
+    color:var(--white-dim);
+    margin:0 0 18px;
+  }
+  .subtitle .pipe{color:var(--cyan-dim); margin:0 8px;}
+  .lede{max-width:620px; color:var(--white-dim); font-size:15px; line-height:1.6;}
+  .hero-tags{display:flex; gap:10px; margin-top:22px; flex-wrap:wrap;}
+  .hero-tag{
+    font-family:var(--font-mono); font-size:12px; color:var(--white);
+    border:1px solid var(--line); padding:6px 12px; border-radius:8px;
+    background:var(--surface);
+  }
+
+  /* ---------- section shell ---------- */
+  section{margin-top:52px;}
+  .sec-head{display:flex; align-items:baseline; gap:12px; margin-bottom:18px; flex-wrap:wrap;}
+  .sec-num{font-family:var(--font-mono); color:var(--cyan-dim); font-size:13px;}
+  .sec-title{font-family:var(--font-display); font-weight:600; font-size:22px; color:var(--white); margin:0;}
+  .sec-desc{color:var(--white-dim); font-size:14px; margin:-8px 0 18px; max-width:640px; line-height:1.55;}
+
+  .card{
+    background:linear-gradient(180deg, var(--surface), var(--surface-2));
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:22px;
+  }
+  .grid-2{display:grid; grid-template-columns:1.3fr 1fr; gap:20px;}
+  .grid-3{display:grid; grid-template-columns:repeat(3,1fr); gap:16px;}
+  .grid-5{display:grid; grid-template-columns:repeat(5,1fr); gap:14px;}
+  @media(max-width:900px){
+    .grid-2{grid-template-columns:1fr;}
+    .grid-3{grid-template-columns:1fr 1fr;}
+    .grid-5{grid-template-columns:1fr 1fr;}
+  }
+  @media(max-width:560px){
+    .grid-3{grid-template-columns:1fr;}
+    .grid-5{grid-template-columns:1fr;}
+  }
+
+  /* ---------- ocean scene ---------- */
+  .scene-card{padding:0; overflow:hidden;}
+  .scene{
+    position:relative; width:100%; height:340px;
+    background:linear-gradient(180deg, #0B3A50 0%, #072B3D 55%, #052132 100%);
+    overflow:hidden;
+  }
+  .scene svg{position:absolute; inset:0; width:100%; height:100%;}
+  .flow-strip{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:16px 22px; gap:8px; flex-wrap:wrap;
+    border-top:1px solid var(--line);
+    background:rgba(3,32,46,0.5);
+  }
+  .flow-node{
+    display:flex; flex-direction:column; align-items:center; gap:4px;
+    font-family:var(--font-mono); font-size:11px; color:var(--white-dim);
+    min-width:64px;
+  }
+  .flow-node .ic{font-size:18px;}
+  .flow-node.active{color:var(--cyan);}
+  .flow-arrow{color:var(--cyan-dim); font-size:16px;}
+
+  /* ---------- controls ---------- */
+  .control{margin-bottom:18px;}
+  .control label{
+    display:flex; justify-content:space-between;
+    font-family:var(--font-mono); font-size:12.5px; color:var(--white-dim);
+    margin-bottom:8px;
+  }
+  .control label span.val{color:var(--cyan); font-weight:700;}
+  input[type=range]{
+    -webkit-appearance:none; width:100%; height:6px; border-radius:4px;
+    background:linear-gradient(90deg, var(--cyan-dim), var(--ocean-2));
+    outline:none;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none; width:18px; height:18px; border-radius:50%;
+    background:var(--cyan); border:3px solid #03202E; cursor:pointer;
+    box-shadow:0 0 10px rgba(47,227,240,0.6);
+  }
+  input[type=range]::-moz-range-thumb{
+    width:18px; height:18px; border-radius:50%;
+    background:var(--cyan); border:3px solid #03202E; cursor:pointer;
+  }
+  .btn-row{display:flex; gap:10px; flex-wrap:wrap; margin-top:6px;}
+  button{
+    font-family:var(--font-body); font-weight:600; font-size:13.5px;
+    border-radius:9px; border:1px solid var(--line);
+    padding:10px 16px; cursor:pointer;
+    background:var(--surface-2); color:var(--white);
+    transition:transform .12s ease, border-color .12s ease, background .12s ease;
+  }
+  button:hover{border-color:var(--cyan-dim); transform:translateY(-1px);}
+  button:active{transform:translateY(0);}
+  button.primary{background:linear-gradient(90deg, var(--cyan-dim), var(--cyan)); color:#03202E; border:none;}
+  button.ghost{background:transparent;}
+  button.danger{border-color:rgba(240,102,90,0.4); color:var(--red);}
+  button.small{padding:7px 12px; font-size:12px;}
+  button:disabled{opacity:.4; cursor:not-allowed; transform:none;}
+  button.active-state{outline:2px solid var(--cyan); outline-offset:1px;}
+
+  /* ---------- sensor readouts ---------- */
+  .readout{
+    background:var(--surface); border:1px solid var(--line); border-radius:12px;
+    padding:14px 16px;
+  }
+  .readout .label{font-family:var(--font-mono); font-size:11px; color:var(--white-dim); letter-spacing:.04em; text-transform:uppercase;}
+  .readout .value{font-family:var(--font-mono); font-size:24px; font-weight:700; color:var(--cyan); margin-top:6px;}
+  .readout .unit{font-size:13px; color:var(--white-dim); font-weight:400; margin-left:4px;}
+
+  /* ---------- ai prediction ---------- */
+  .predict-row{display:flex; gap:14px; flex-wrap:wrap;}
+  .predict-chip{
+    flex:1; min-width:120px;
+    background:var(--surface); border:1px solid var(--line); border-radius:12px;
+    padding:14px; text-align:center;
+  }
+  .predict-chip .t{font-family:var(--font-mono); font-size:11px; color:var(--white-dim);}
+  .predict-chip .p{font-family:var(--font-mono); font-size:22px; color:var(--green); font-weight:700; margin-top:6px;}
+  .condition-badge{
+    display:inline-block; margin-top:16px; padding:6px 14px; border-radius:100px;
+    font-family:var(--font-mono); font-size:12px; font-weight:700; letter-spacing:.04em;
+  }
+  .cond-low{background:rgba(240,102,90,0.15); color:var(--red); border:1px solid rgba(240,102,90,.35);}
+  .cond-medium{background:rgba(245,194,66,0.15); color:var(--yellow); border:1px solid rgba(245,194,66,.35);}
+  .cond-high{background:rgba(59,220,160,0.15); color:var(--green); border:1px solid rgba(59,220,160,.35);}
+  .ai-note{
+    margin-top:14px; font-size:14px; line-height:1.6; color:var(--white);
+    background:rgba(47,227,240,0.06); border-left:3px solid var(--cyan);
+    padding:12px 14px; border-radius:0 8px 8px 0;
+  }
+
+  /* ---------- battery ---------- */
+  .battery-wrap{display:flex; align-items:center; gap:24px; flex-wrap:wrap;}
+  .battery-shell{
+    width:110px; height:56px; border:3px solid var(--white-dim); border-radius:8px;
+    position:relative; padding:3px; flex-shrink:0;
+  }
+  .battery-shell::after{
+    content:""; position:absolute; right:-9px; top:16px; width:6px; height:24px;
+    background:var(--white-dim); border-radius:0 3px 3px 0;
+  }
+  .battery-fill{
+    height:100%; border-radius:4px;
+    background:linear-gradient(90deg, var(--cyan-dim), var(--green));
+    transition:width .6s ease;
+  }
+  .battery-pct{font-family:var(--font-mono); font-size:30px; font-weight:700; color:var(--white);}
+  .recommend-box{
+    margin-top:16px; padding:16px; border-radius:12px;
+    background:var(--surface); border:1px solid var(--line);
+  }
+  .recommend-action{font-family:var(--font-display); font-weight:700; font-size:17px; color:var(--cyan);}
+  .recommend-reason{color:var(--white-dim); font-size:14px; margin-top:6px; line-height:1.5;}
+
+  /* ---------- loads ---------- */
+  .load-row{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:12px 14px; border:1px solid var(--line); border-radius:10px; margin-bottom:10px;
+    background:var(--surface);
+  }
+  .load-row.priority{border-color:rgba(59,220,160,0.35);}
+  .load-info{display:flex; flex-direction:column; gap:2px;}
+  .load-name{font-weight:600; font-size:14px;}
+  .load-meta{font-family:var(--font-mono); font-size:11px; color:var(--white-dim);}
+  .prio-tag{font-family:var(--font-mono); font-size:10px; color:var(--green); border:1px solid rgba(59,220,160,.4); border-radius:100px; padding:2px 8px; margin-left:8px;}
+  .switch{
+    position:relative; width:46px; height:26px; border-radius:100px; cursor:pointer;
+    background:var(--ocean-2); border:1px solid var(--line); flex-shrink:0;
+  }
+  .switch.on{background:var(--green);}
+  .switch .knob{
+    position:absolute; top:2px; left:2px; width:20px; height:20px; border-radius:50%;
+    background:var(--white); transition:left .18s ease;
+  }
+  .switch.on .knob{left:22px;}
+  .ai-log{
+    margin-top:14px; font-size:13px; color:var(--cyan); font-style:italic;
+    min-height:18px;
+  }
+
+  /* ---------- fault / health ---------- */
+  .health-badge{
+    display:inline-flex; align-items:center; gap:8px;
+    padding:8px 16px; border-radius:100px; font-family:var(--font-mono); font-weight:700; font-size:13px;
+  }
+  .health-normal{background:rgba(59,220,160,0.15); color:var(--green); border:1px solid rgba(59,220,160,.35);}
+  .health-warning{background:rgba(245,194,66,0.15); color:var(--yellow); border:1px solid rgba(245,194,66,.35);}
+  .health-critical{background:rgba(240,102,90,0.15); color:var(--red); border:1px solid rgba(240,102,90,.35);}
+  .fault-log{
+    margin-top:16px; max-height:150px; overflow-y:auto;
+    font-family:var(--font-mono); font-size:12px; color:var(--white-dim);
+    border-top:1px solid var(--line); padding-top:10px;
+  }
+  .fault-log div{padding:4px 0; border-bottom:1px dashed var(--line);}
+  .fault-log span.time{color:var(--cyan-dim); margin-right:8px;}
+
+  /* ---------- charts ---------- */
+  .chart-card canvas{width:100%; height:180px; display:block;}
+  .chart-title{font-family:var(--font-mono); font-size:12px; color:var(--white-dim); margin-bottom:10px; display:flex; justify-content:space-between;}
+  .legend-dot{display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:6px;}
+
+  /* ---------- report ---------- */
+  #reportBox{
+    display:none; margin-top:18px; padding:18px;
+    background:#02141d; border:1px solid var(--line); border-radius:12px;
+    font-family:var(--font-mono); font-size:12.5px; color:var(--white-dim);
+    white-space:pre-wrap; line-height:1.7;
+  }
+
+  /* ---------- q&a ---------- */
+  .qbtn-row{display:flex; flex-wrap:wrap; gap:10px;}
+  #answerBox{
+    display:none; margin-top:14px; padding:14px 16px;
+    background:rgba(47,227,240,0.06); border-left:3px solid var(--cyan);
+    border-radius:0 8px 8px 0; font-size:14px;
+  }
+
+  footer{
+    margin-top:70px; padding:26px 0; border-top:1px solid var(--line);
+    text-align:center; color:var(--white-dim); font-size:12.5px; font-family:var(--font-mono);
+  }
+
+  .muted{color:var(--white-dim);}
+  .small-note{font-size:12px; color:var(--white-dim); margin-top:10px; line-height:1.5;}
+
+  /* ---------- coastal alert / tsunami buzzer ---------- */
+  .alert-top{display:flex; align-items:center; gap:22px; flex-wrap:wrap;}
+  .siren{
+    position:relative; width:78px; height:78px; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .siren .ring{
+    position:absolute; border-radius:50%; border:2px solid var(--green);
+    opacity:0; inset:0;
+  }
+  .siren .core{
+    position:relative; width:46px; height:46px; border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, #4be8ac, var(--green) 70%);
+    display:flex; align-items:center; justify-content:center;
+    font-size:20px; box-shadow:0 0 14px rgba(59,220,160,0.55);
+    transition:background .25s ease, box-shadow .25s ease;
+  }
+  .siren.watch .core{background:radial-gradient(circle at 35% 30%, #ffe08a, var(--yellow) 70%); box-shadow:0 0 16px rgba(245,194,66,.6);}
+  .siren.warning .core, .siren.danger .core{background:radial-gradient(circle at 35% 30%, #ff9d92, var(--red) 70%); box-shadow:0 0 22px rgba(240,102,90,.75);}
+  .siren.watch .ring, .siren.warning .ring, .siren.danger .ring{
+    animation:sirenPulse 1.6s ease-out infinite; border-color:var(--yellow);
+  }
+  .siren.warning .ring, .siren.danger .ring{border-color:var(--red); animation-duration:1s;}
+  .siren.danger .ring{animation-duration:.6s;}
+  @keyframes sirenPulse{
+    0%{transform:scale(0.6); opacity:.65;}
+    100%{transform:scale(1.9); opacity:0;}
+  }
+  .alert-status .lvl{
+    font-family:var(--font-display); font-weight:700; font-size:20px; color:var(--green);
+    transition:color .2s ease;
+  }
+  .alert-status .desc{color:var(--white-dim); font-size:13.5px; margin-top:4px; max-width:520px; line-height:1.5;}
+  .alert-badge{
+    display:inline-flex; align-items:center; gap:6px; margin-top:8px;
+    font-family:var(--font-mono); font-size:11.5px; font-weight:700; letter-spacing:.05em;
+    padding:5px 12px; border-radius:100px;
+  }
+  .alert-safe{background:rgba(59,220,160,0.15); color:var(--green); border:1px solid rgba(59,220,160,.35);}
+  .alert-watch{background:rgba(245,194,66,0.15); color:var(--yellow); border:1px solid rgba(245,194,66,.35);}
+  .alert-warning{background:rgba(240,102,90,0.15); color:var(--red); border:1px solid rgba(240,102,90,.35);}
+  .alert-danger{background:rgba(240,102,90,0.28); color:#fff; border:1px solid rgba(240,102,90,.7); animation:dangerFlash 1s ease-in-out infinite;}
+  @keyframes dangerFlash{0%,100%{opacity:1;} 50%{opacity:.55;}}
+
+  .zone-list{margin-top:18px; display:grid; grid-template-columns:repeat(3,1fr); gap:12px;}
+  @media(max-width:700px){.zone-list{grid-template-columns:1fr;}}
+  .zone{
+    border:1px solid var(--line); border-radius:10px; padding:12px 14px;
+    background:var(--surface); display:flex; align-items:center; justify-content:space-between; gap:10px;
+  }
+  .zone .zname{font-size:13px; font-weight:600;}
+  .zone .zdist{font-family:var(--font-mono); font-size:11px; color:var(--white-dim); margin-top:2px;}
+  .zone-dot{width:10px; height:10px; border-radius:50%; background:var(--green); flex-shrink:0; box-shadow:0 0 6px var(--green);}
+  .zone-dot.watch{background:var(--yellow); box-shadow:0 0 6px var(--yellow);}
+  .zone-dot.warning, .zone-dot.danger{background:var(--red); box-shadow:0 0 6px var(--red);}
+
+  .alert-controls{display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:20px;}
+  .mute-row{display:flex; align-items:center; gap:10px; font-family:var(--font-mono); font-size:12.5px; color:var(--white-dim);}
+  .scene.flash-danger{animation:sceneFlash 1s ease-in-out infinite;}
+  @keyframes sceneFlash{0%,100%{box-shadow:inset 0 0 0 0 rgba(240,102,90,0);} 50%{box-shadow:inset 0 0 40px 6px rgba(240,102,90,0.55);}}
+</style>
+<style>
+  .manager-console-link{position:fixed;right:24px;bottom:24px;z-index:9999;display:flex;align-items:center;gap:9px;padding:13px 17px;border-radius:999px;background:linear-gradient(90deg,#1AA9B8,#2FE3F0);color:#03202E!important;text-decoration:none;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;box-shadow:0 10px 26px rgba(0,0,0,.28);transition:transform .2s,box-shadow .2s}.manager-console-link:hover{transform:translateY(-3px);box-shadow:0 14px 30px rgba(47,227,240,.28)}@media(max-width:600px){.manager-console-link{right:14px;bottom:14px;padding:11px 14px;font-size:12px}}
+</style>
+</head>
+<body>
+
+<div class="proto-badge">⚠ <b>Educational Prototype — Simulated Data</b> — no real hardware or ocean sensors are connected</div>
+
+<div class="wrap">
+
+  <header class="hero">
+    <span class="eyebrow"><span class="dot"></span>Live simulation running in your browser</span>
+  <h1 class="title">AI Based Ocean Wave Simulation</h1>
+    <p class="subtitle">Smart Ocean Wave Energy System <span class="pipe">•</span> AI Prediction <span class="pipe">•</span> Smart Battery <span class="pipe">•</span> Fault Detection</p>
+    <p class="lede">This project uses AI to study ocean waves and make smart energy decisions. Move the sliders below to change the sea, and watch the buoy, generator, battery and AI respond in real time.</p>
+    <div class="hero-tags">
+      <span class="hero-tag">🌊 Wave to Watts</span>
+      <span class="hero-tag">🔋 Battery Aware</span>
+      <span class="hero-tag">🛟 Priority Loads</span>
+      <span class="hero-tag">🧠 On-device AI Logic</span>
+      <span class="hero-tag">🚨 Coastal Alert &amp; Buzzer</span>
+    </div>
+  </header>
+
+  <!-- SECTION 2: OCEAN SCENE -->
+  <section id="scene-section">
+    <div class="sec-head"><span class="sec-num">01</span><h2 class="sec-title">Ocean wave energy model</h2></div>
+    <p class="sec-desc">A floating buoy rises and falls with the waves. That movement turns a small generator, which charges the battery that powers important loads.</p>
+    <div class="card scene-card">
+      <div class="scene">
+        <svg viewBox="0 0 1000 340" preserveAspectRatio="none" id="sceneSvg">
+          <defs>
+            <linearGradient id="waterGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#0E5978"/>
+              <stop offset="100%" stop-color="#052132"/>
+            </linearGradient>
+          </defs>
+          <!-- sky glow -->
+          <circle cx="860" cy="46" r="70" fill="#2FE3F0" opacity="0.06"/>
+
+          <!-- rig -->
+          <line x1="770" y1="60" x2="770" y2="230" stroke="#123F55" stroke-width="10"/>
+          <rect x="740" y="40" width="60" height="26" rx="4" fill="#123F55"/>
+          <text x="770" y="34" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#AFCBD6">GENERATOR</text>
+
+          <!-- rack line (mechanical converter) -->
+          <line id="rackLine" x1="770" y1="70" x2="770" y2="150" stroke="#2FE3F0" stroke-width="4" stroke-dasharray="6 6"/>
+
+          <!-- energy flow dots ocean->buoy handled by buoy anim; buoy->generator->battery -->
+          <circle id="flowDot1" cx="770" cy="150" r="5" fill="#3BDCA0" opacity="0"/>
+
+          <!-- battery pack on shore -->
+          <g transform="translate(880,150)">
+            <rect x="0" y="0" width="46" height="70" rx="6" fill="#0C3448" stroke="#2FE3F0" stroke-width="2"/>
+            <rect id="batteryRectFill" x="6" y="60" width="34" height="4" fill="#3BDCA0"/>
+            <text x="23" y="-10" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#AFCBD6">BATTERY</text>
+          </g>
+
+          <!-- sensor buoy tiny -->
+          <g transform="translate(150,60)">
+            <rect x="-3" y="0" width="6" height="20" fill="#123F55"/>
+            <circle cx="0" cy="-6" r="7" fill="#2FE3F0" opacity="0.8"/>
+            <text x="0" y="34" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#AFCBD6">SENSOR</text>
+          </g>
+
+          <!-- waves: three layered paths -->
+          <path id="waveBack" d="" fill="#0E5978" opacity="0.55"/>
+          <path id="waveMid" d="" fill="#0B4C6E" opacity="0.75"/>
+          <path id="waveFront" d="" fill="url(#waterGrad)"/>
+
+          <!-- buoy -->
+          <g id="buoyGroup">
+            <ellipse cx="0" cy="8" rx="26" ry="9" fill="#03202E" opacity="0.35"/>
+            <circle cx="0" cy="0" r="20" fill="#2FE3F0"/>
+            <circle cx="0" cy="0" r="20" fill="none" stroke="#0C3448" stroke-width="2"/>
+            <rect x="-3" y="-34" width="6" height="20" fill="#EAF7FB"/>
+            <circle cx="0" cy="-38" r="5" fill="#3BDCA0"/>
+          </g>
+
+          <text x="20" y="24" font-family="JetBrains Mono" font-size="11" fill="#AFCBD6" id="waveLabel">WAVE HEIGHT: 0.4 m</text>
+        </svg>
+      </div>
+      <div class="flow-strip">
+        <div class="flow-node" id="flowN0"><span class="ic">🌊</span>Ocean Waves</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node" id="flowN1"><span class="ic">🛟</span>Buoy Movement</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node" id="flowN2"><span class="ic">⚙️</span>Generator</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node" id="flowN3"><span class="ic">🔋</span>Battery</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node" id="flowN4"><span class="ic">💡</span>Important Loads</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 3: CONTROLS -->
+  <section id="controls-section">
+    <div class="sec-head"><span class="sec-num">02</span><h2 class="sec-title">Wave controls</h2></div>
+    <p class="sec-desc">Change the sea conditions and see every reading, chart and AI decision update live.</p>
+    <div class="card">
+      <div class="grid-3">
+        <div class="control">
+          <label>Wave height <span class="val" id="waveHeightVal">0.4 m</span></label>
+          <input type="range" id="waveHeight" min="0.1" max="1.0" step="0.05" value="0.4">
+        </div>
+        <div class="control">
+          <label>Wave speed <span class="val" id="waveSpeedVal">5</span></label>
+          <input type="range" id="waveSpeed" min="1" max="10" step="1" value="5">
+        </div>
+        <div class="control">
+          <label>Wave frequency <span class="val" id="waveFreqVal">0.20 Hz</span></label>
+          <input type="range" id="waveFreq" min="0.05" max="0.50" step="0.01" value="0.20">
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="primary" id="startBtn">▶ Start simulation</button>
+        <button id="pauseBtn" disabled>⏸ Pause simulation</button>
+        <button class="ghost" id="resetBtn">↺ Reset</button>
+      </div>
+      <p class="small-note">Hz = hertz (how many waves pass per second) · m = metres</p>
+    </div>
+  </section>
+
+  <!-- SECTION 4: LIVE SENSOR DATA -->
+  <section id="sensor-section">
+    <div class="sec-head"><span class="sec-num">03</span><h2 class="sec-title">Live sensor data</h2></div>
+    <p class="sec-desc">All values below update every second while the simulation is running.</p>
+    <div class="grid-5" id="sensorGrid" style="grid-template-columns:repeat(4,1fr);">
+      <div class="readout"><div class="label">Wave height</div><div class="value" id="rHeight">0.40<span class="unit">m</span></div></div>
+      <div class="readout"><div class="label">Wave frequency</div><div class="value" id="rFreq">0.20<span class="unit">Hz</span></div></div>
+      <div class="readout"><div class="label">Wave speed</div><div class="value" id="rSpeed">5<span class="unit">/10</span></div></div>
+      <div class="readout"><div class="label">Generator voltage</div><div class="value" id="rVolt">0<span class="unit">V</span></div></div>
+      <div class="readout"><div class="label">Current</div><div class="value" id="rCurrent">0<span class="unit">A</span></div></div>
+      <div class="readout"><div class="label">Power output</div><div class="value" id="rPower">0<span class="unit">W</span></div></div>
+      <div class="readout"><div class="label">Total energy generated</div><div class="value" id="rEnergy">0<span class="unit">Wh</span></div></div>
+      <div class="readout"><div class="label">Battery</div><div class="value" id="rBattery">50<span class="unit">%</span></div></div>
+    </div>
+    <div style="margin-top:14px;">
+      <span class="health-badge health-normal" id="sysHealthBadge">System health: 100%</span>
+    </div>
+  </section>
+
+  <!-- SECTION 5: AI PREDICTION -->
+  <section id="predict-section">
+    <div class="sec-head"><span class="sec-num">04</span><h2 class="sec-title">AI power prediction</h2></div>
+    <p class="sec-desc">Using the last few readings of wave height, speed and frequency, WaveWise AI estimates power output a little ahead of time.</p>
+    <div class="card">
+      <div class="predict-row">
+        <div class="predict-chip"><div class="t">In 10 seconds</div><div class="p" id="pred10">0 W</div></div>
+        <div class="predict-chip"><div class="t">In 20 seconds</div><div class="p" id="pred20">0 W</div></div>
+        <div class="predict-chip"><div class="t">In 30 seconds</div><div class="p" id="pred30">0 W</div></div>
+        <div class="predict-chip"><div class="t">Confidence</div><div class="p" id="predConf" style="color:var(--cyan);">0%</div></div>
+      </div>
+      <span class="condition-badge cond-medium" id="predCondition">MEDIUM POWER</span>
+      <div class="ai-note" id="predNote">Start the simulation to see live predictions.</div>
+    </div>
+  </section>
+
+  <!-- SECTION 6: SMART BATTERY -->
+  <section id="battery-section">
+    <div class="sec-head"><span class="sec-num">05</span><h2 class="sec-title">Smart battery control</h2></div>
+    <p class="sec-desc">The AI recommends one clear action based on the battery level and the power prediction above.</p>
+    <div class="card">
+      <div class="battery-wrap">
+        <div class="battery-shell"><div class="battery-fill" id="batteryFill" style="width:50%;"></div></div>
+        <div><div class="battery-pct" id="batteryPctBig">50%</div><div class="muted" style="font-size:12px;">Battery level</div></div>
+      </div>
+      <div class="recommend-box">
+        <div class="recommend-action" id="recAction">Charge Battery</div>
+        <div class="recommend-reason" id="recReason">Battery is healthy. Power can be used for normal loads.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 7: PRIORITY LOADS -->
+  <section id="loads-section">
+    <div class="sec-head"><span class="sec-num">06</span><h2 class="sec-title">Priority load management</h2></div>
+    <p class="sec-desc">Turn loads on or off, or let the AI protect the most important ones automatically when energy is scarce.</p>
+    <div class="card">
+      <div id="loadsList"></div>
+      <div class="ai-log" id="aiLoadLog"></div>
+    </div>
+  </section>
+
+  <!-- SECTION 8: FAULT DETECTION -->
+  <section id="fault-section">
+    <div class="sec-head"><span class="sec-num">07</span><h2 class="sec-title">System health and fault detection</h2></div>
+    <p class="sec-desc">Click a demo condition below to see how WaveWise AI reacts to real-world problems.</p>
+    <div class="card">
+      <div class="btn-row" id="faultButtons">
+        <button class="small active-state" data-fault="normal">✅ Normal System</button>
+        <button class="small" data-fault="sensor">📡 Sensor Error</button>
+        <button class="small" data-fault="voltage">⚡ Low Voltage</button>
+        <button class="small" data-fault="motor">⚙️ Motor Problem</button>
+        <button class="small" data-fault="overheat">🔥 Battery Overheating</button>
+      </div>
+      <div style="margin-top:18px; display:flex; gap:14px; flex-wrap:wrap; align-items:center;">
+        <span class="health-badge health-normal" id="faultHealthBadge">Health: 100%</span>
+        <span class="health-badge health-normal" id="urgencyBadge">Urgency: Normal</span>
+      </div>
+      <div class="ai-note" id="faultAction">Everything is working normally. No action needed.</div>
+      <div class="fault-log" id="faultLog"></div>
+    </div>
+  </section>
+
+  <!-- SECTION 9: DIGITAL TWIN -->
+  <section id="twin-section">
+    <div class="sec-head"><span class="sec-num">08</span><h2 class="sec-title">Try a situation</h2></div>
+    <p class="sec-desc">Jump straight to a scenario and watch the whole system react.</p>
+    <div class="card">
+      <div class="btn-row">
+        <button data-scenario="calm">🌤 Calm Sea</button>
+        <button data-scenario="normal">🌊 Normal Sea</button>
+        <button data-scenario="rough">🌪 Rough Sea</button>
+        <button data-scenario="lowbatt">🔋 Low Battery</button>
+        <button data-scenario="genfault">🚨 Generator Fault</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 9: COASTAL ALERT / TSUNAMI-HIGH WAVE BUZZER -->
+  <section id="alert-section">
+    <div class="sec-head"><span class="sec-num">09</span><h2 class="sec-title">Coastal alert &amp; high-wave buzzer</h2></div>
+    <p class="sec-desc">WaveWise AI watches wave height and how fast it is rising. If waves get dangerously high, it raises an alert level and sounds a buzzer so people living near the shore get an early warning.</p>
+    <div class="card">
+      <div class="alert-top">
+        <div class="siren" id="sirenEl">
+          <div class="ring"></div>
+          <div class="ring" style="animation-delay:.4s;"></div>
+          <div class="core">🔔</div>
+        </div>
+        <div class="alert-status">
+          <div class="lvl" id="alertLevelText">All Clear</div>
+          <span class="alert-badge alert-safe" id="alertBadge">SAFE</span>
+          <div class="desc" id="alertDesc">Wave height is normal. No coastal warning is active. The buzzer will sound automatically if waves rise sharply.</div>
+        </div>
+      </div>
+
+      <div class="zone-list" id="zoneList">
+        <div class="zone"><div><div class="zname">Fishing Harbour</div><div class="zdist">0.8 km from shore</div></div><div class="zone-dot" data-zone="0"></div></div>
+        <div class="zone"><div><div class="zname">Coastal Village</div><div class="zdist">1.5 km from shore</div></div><div class="zone-dot" data-zone="1"></div></div>
+        <div class="zone"><div><div class="zname">Beach Clinic</div><div class="zdist">2.2 km from shore</div></div><div class="zone-dot" data-zone="2"></div></div>
+      </div>
+
+      <div class="alert-controls">
+        <div class="mute-row">
+          <span>Buzzer sound</span>
+          <div class="switch on" id="buzzerMuteSwitch"><div class="knob"></div></div>
+          <span id="buzzerMuteLabel">On</span>
+        </div>
+        <div class="btn-row" style="margin-top:0;">
+          <button class="small" data-testalert="watch">🟡 Test Watch</button>
+          <button class="small danger" data-testalert="warning">🟠 Test Warning</button>
+          <button class="small danger" data-testalert="danger">🔴 Test Tsunami Danger</button>
+          <button class="small ghost" data-testalert="safe">✅ Clear Alert</button>
+        </div>
+      </div>
+      <p class="small-note">Test buttons simulate what nearby residents would see and hear. During the live simulation above, the alert updates automatically from wave height and how quickly it is rising.</p>
+      <div class="fault-log" id="alertLog"></div>
+    </div>
+  </section>
+
+  <!-- SECTION 10: CHARTS -->
+  <section id="chart-section">
+    <div class="sec-head"><span class="sec-num">10</span><h2 class="sec-title">Charts</h2></div>
+    <p class="sec-desc">The last 20 readings, updated live while the simulation runs.</p>
+    <div class="grid-2">
+      <div class="card chart-card">
+        <div class="chart-title"><span><span class="legend-dot" style="background:var(--cyan);"></span>Wave Height History</span><span class="muted">metres</span></div>
+        <canvas id="waveChart" width="560" height="180"></canvas>
+      </div>
+      <div class="card chart-card">
+        <div class="chart-title"><span><span class="legend-dot" style="background:var(--green);"></span>Generated Power History</span><span class="muted">watts</span></div>
+        <canvas id="powerChart" width="560" height="180"></canvas>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 11: REPORT -->
+  <section id="report-section">
+    <div class="sec-head"><span class="sec-num">11</span><h2 class="sec-title">Demo report</h2></div>
+    <div class="card">
+      <div class="btn-row">
+        <button class="primary" id="genReportBtn">📝 Generate Demo Report</button>
+        <button id="downloadReportBtn" disabled>⬇ Download Report</button>
+      </div>
+      <div id="reportBox"></div>
+    </div>
+  </section>
+
+  <!-- SECTION 12: QUESTIONS -->
+  <section id="qa-section">
+    <div class="sec-head"><span class="sec-num">12</span><h2 class="sec-title">Ask WaveWise AI</h2></div>
+    <p class="sec-desc">Tap a question to get a quick answer. No microphone needed.</p>
+    <div class="card">
+      <div class="qbtn-row">
+        <button data-q="power">What is the current power?</button>
+        <button data-q="battery">What is the battery level?</button>
+        <button data-q="recommend">What is the AI recommendation?</button>
+        <button data-q="health">Is the system healthy?</button>
+        <button data-q="alert">Is there a coastal alert right now?</button>
+      </div>
+      <div id="answerBox"></div>
+    </div>
+  </section>
+
+  <footer>WaveWise AI · Educational Prototype · All wave, electrical and fault data on this page is simulated in your browser.</footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ============ STATE ============ */
+  const state = {
+    running:false,
+    t:0,
+    waveHeight:0.4,
+    waveSpeed:5,
+    waveFreq:0.20,
+    voltage:0, current:0, power:0,
+    totalEnergyWh:0,
+    battery:50,
+    systemHealth:100,
+    fault:'normal',
+    urgency:'Normal',
+    waveHistory:[],
+    powerHistory:[],
+    powerTrend:[],
+    alertLevel:'safe',
+    alertMuted:false,
+    loads:{
+      comm:{name:'Emergency Communication', watt:5, on:true, priority:true},
+      fridge:{name:'Clinic Refrigerator', watt:150, on:true, priority:true},
+      harbour:{name:'Harbour Light', watt:40, on:true, priority:false},
+      pump:{name:'Water Pump', watt:200, on:true, priority:false},
+      deco:{name:'Decorative Light', watt:20, on:true, priority:false}
+    }
+  };
+
+  const BATTERY_CAPACITY_WH = 2000;
+  let timer = null;
+
+  /* ============ DOM ============ */
+  const el = id => document.getElementById(id);
+  const waveHeightIn = el('waveHeight'), waveSpeedIn = el('waveSpeed'), waveFreqIn = el('waveFreq');
+  const startBtn = el('startBtn'), pauseBtn = el('pauseBtn'), resetBtn = el('resetBtn');
+  const sceneEl = document.querySelector('.scene');
+
+  /* ============ LOADS UI ============ */
+  function renderLoads(){
+    const list = el('loadsList');
+    list.innerHTML = '';
+    Object.entries(state.loads).forEach(([key, load])=>{
+      const row = document.createElement('div');
+      row.className = 'load-row' + (load.priority ? ' priority':'');
+      row.innerHTML = `
+        <div class="load-info">
+          <div class="load-name">${load.name}${load.priority?'<span class="prio-tag">PRIORITY</span>':''}</div>
+          <div class="load-meta">${load.watt} W</div>
+        </div>
+        <div class="switch ${load.on?'on':''}" data-load="${key}"><div class="knob"></div></div>
+      `;
+      list.appendChild(row);
+    });
+    list.querySelectorAll('.switch').forEach(sw=>{
+      sw.addEventListener('click', ()=>{
+        const k = sw.getAttribute('data-load');
+        state.loads[k].on = !state.loads[k].on;
+        renderLoads();
+      });
+    });
+  }
+  renderLoads();
+
+  /* ============ SCENE SVG (waves + buoy) ============ */
+  const buoyGroup = el('buoyGroup');
+  const waveBack = el('waveBack'), waveMid = el('waveMid'), waveFront = el('waveFront');
+  const rackLine = el('rackLine');
+  const flowDot1 = el('flowDot1');
+  const batteryRectFill = el('batteryRectFill');
+  const waveLabel = el('waveLabel');
+  const SCENE_W = 1000, SCENE_H = 340, BASE_Y = 210;
+
+  function wavePath(amp, freq, speed, phase, yBase){
+    let d = `M0,${SCENE_H} L0,${yBase}`;
+    for(let x=0; x<=SCENE_W; x+=20){
+      const y = yBase + Math.sin((x*freq*0.02) + phase) * amp;
+      d += ` L${x},${y}`;
+    }
+    d += ` L${SCENE_W},${SCENE_H} Z`;
+    return d;
+  }
+
+  function drawScene(animT){
+    const h = state.waveHeight; // 0.1 - 1.0
+    const ampPx = 8 + h * 34;               // visual amplitude
+    const freqVis = 0.6 + state.waveFreq*3; // visual frequency multiplier
+    const speedVis = state.waveSpeed/10;
+
+    const phase = animT * (0.6 + speedVis*2.2);
+
+    waveBack.setAttribute('d', wavePath(ampPx*0.6, freqVis*0.8, speedVis, phase*0.7 + 1.4, BASE_Y - 10));
+    waveMid.setAttribute('d', wavePath(ampPx*0.8, freqVis, speedVis, phase*0.9 + 0.6, BASE_Y));
+    waveFront.setAttribute('d', wavePath(ampPx, freqVis*1.1, speedVis, phase, BASE_Y + 14));
+
+    // buoy bobs with the front wave at its x position
+    const buoyX = 400;
+    const buoyY = BASE_Y + 14 + Math.sin((buoyX*freqVis*1.1*0.02) + phase) * ampPx;
+    buoyGroup.setAttribute('transform', `translate(${buoyX},${buoyY})`);
+
+    waveLabel.textContent = `WAVE HEIGHT: ${h.toFixed(2)} m`;
+
+    // energy flow pulse opacity tied to power
+    const pulse = (Math.sin(animT*4) + 1)/2;
+    flowDot1.setAttribute('opacity', state.running ? (0.3 + pulse*0.7) : 0);
+    rackLine.setAttribute('opacity', state.running ? 1 : 0.4);
+
+    const battFillHeight = Math.max(2, (state.battery/100) * 60);
+    batteryRectFill.setAttribute('y', 66 - battFillHeight);
+    batteryRectFill.setAttribute('height', battFillHeight);
+    batteryRectFill.setAttribute('fill', state.battery < 20 ? '#F0665A' : (state.battery < 40 ? '#F5C242' : '#3BDCA0'));
+  }
+
+  let rafT = 0;
+  function animLoop(){
+    rafT += 0.028;
+    drawScene(rafT);
+    requestAnimationFrame(animLoop);
+  }
+  requestAnimationFrame(animLoop);
+
+  /* ============ FLOW STRIP HIGHLIGHT ============ */
+  function updateFlowStrip(){
+    const nodes = ['flowN0','flowN1','flowN2','flowN3','flowN4'];
+    nodes.forEach(id=> el(id).classList.toggle('active', state.running));
+  }
+
+  /* ============ CHARTS ============ */
+  function drawChart(canvasId, data, color, unitMax){
+    const canvas = el(canvasId);
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width, h = canvas.height;
+    ctx.clearRect(0,0,w,h);
+    // grid
+    ctx.strokeStyle = 'rgba(234,247,251,0.08)';
+    ctx.lineWidth = 1;
+    for(let i=0;i<=4;i++){
+      const y = (h/4)*i;
+      ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(w,y); ctx.stroke();
+    }
+    if(data.length < 2) return;
+    const maxVal = unitMax || Math.max(...data, 1);
+    const stepX = w / 19;
+    ctx.beginPath();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2.5;
+    data.forEach((v,i)=>{
+      const x = i*stepX;
+      const y = h - (v/maxVal)*h*0.9 - 6;
+      if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    });
+    ctx.stroke();
+    // fill
+    ctx.lineTo((data.length-1)*stepX, h);
+    ctx.lineTo(0, h);
+    ctx.closePath();
+    ctx.fillStyle = color.replace('1)', '0.12)');
+    const grad = ctx.createLinearGradient(0,0,0,h);
+    grad.addColorStop(0, color+'33');
+    grad.addColorStop(1, color+'00');
+    ctx.fillStyle = grad;
+    ctx.fill();
+    // last point dot
+    const lastX = (data.length-1)*stepX;
+    const lastY = h - (data[data.length-1]/maxVal)*h*0.9 - 6;
+    ctx.beginPath();
+    ctx.arc(lastX, lastY, 4, 0, Math.PI*2);
+    ctx.fillStyle = color;
+    ctx.fill();
+  }
+
+  function updateCharts(){
+    drawChart('waveChart', state.waveHistory, '#2FE3F0', 1.0);
+    drawChart('powerChart', state.powerHistory, '#3BDCA0', 600);
+  }
+
+  /* ============ AI: PREDICTION ============ */
+  function computeInstantPower(h, speed, freq, noise){
+    let p = 380 * h*h * (0.45 + speed/10) * (0.5 + freq/0.5);
+    p *= (1 + (noise||0));
+    return Math.max(0, Math.min(650, p));
+  }
+
+  function updatePrediction(){
+    const trend = state.powerTrend;
+    if(trend.length < 2){
+      el('pred10').textContent = '-- W';
+      el('pred20').textContent = '-- W';
+      el('pred30').textContent = '-- W';
+      el('predConf').textContent = '--%';
+      return;
+    }
+    // simple linear regression on recent trend (last up to 8 points)
+    const recent = trend.slice(-8);
+    const n = recent.length;
+    const xs = recent.map((_,i)=>i);
+    const meanX = xs.reduce((a,b)=>a+b,0)/n;
+    const meanY = recent.reduce((a,b)=>a+b,0)/n;
+    let num=0, den=0;
+    for(let i=0;i<n;i++){ num += (xs[i]-meanX)*(recent[i]-meanY); den += (xs[i]-meanX)**2; }
+    const slope = den===0 ? 0 : num/den;
+    const lastVal = recent[n-1];
+
+    const p10 = Math.max(0, Math.min(650, lastVal + slope*10));
+    const p20 = Math.max(0, Math.min(650, lastVal + slope*20));
+    const p30 = Math.max(0, Math.min(650, lastVal + slope*30));
+
+    el('pred10').textContent = Math.round(p10)+' W';
+    el('pred20').textContent = Math.round(p20)+' W';
+    el('pred30').textContent = Math.round(p30)+' W';
+
+    // confidence: higher when trend is stable (low variance) and we have more samples
+    const variance = recent.reduce((a,b)=>a+(b-meanY)**2,0)/n;
+    const stability = Math.max(0, 1 - Math.min(1, variance/15000));
+    const confidence = Math.round(40 + stability*55 + Math.min(n,8)/8*5);
+    el('predConf').textContent = Math.min(98,confidence)+'%';
+
+    const avgPred = (p10+p20+p30)/3;
+    const badge = el('predCondition');
+    const note = el('predNote');
+    if(avgPred < 150){
+      badge.className = 'condition-badge cond-low';
+      badge.textContent = 'LOW POWER';
+      note.textContent = 'Waves are weak. Save battery power for important devices.';
+    } else if(avgPred < 350){
+      badge.className = 'condition-badge cond-medium';
+      badge.textContent = 'MEDIUM POWER';
+      note.textContent = 'Sea conditions are steady. Power output should stay moderate.';
+    } else {
+      badge.className = 'condition-badge cond-high';
+      badge.textContent = 'HIGH POWER';
+      note.textContent = 'Waves are becoming stronger. More power may be produced soon.';
+    }
+  }
+
+  /* ============ AI: BATTERY RECOMMENDATION ============ */
+  function updateBatteryRecommendation(predictedAvg){
+    const b = state.battery;
+    let action, reason;
+    if(b < 15){
+      action = 'Emergency Reserve Mode';
+      reason = 'Battery is critically low. Only emergency loads will be kept powered.';
+    } else if(b < 30 && predictedAvg < 250){
+      action = 'Save Battery';
+      reason = 'Battery is low and future wave power is low. Save energy.';
+    } else if(predictedAvg >= 350){
+      action = 'Charge Battery';
+      reason = 'Wave power is high. Charge the battery now.';
+    } else if(b < 40){
+      action = 'Reduce Non-Essential Loads';
+      reason = 'Battery is getting low. Reduce loads that are not essential.';
+    } else if(b > 85 && predictedAvg > 200){
+      action = 'Use Power Now';
+      reason = 'Battery is nearly full and power is available. Use it for normal loads.';
+    } else {
+      action = 'Charge Battery';
+      reason = 'Battery is healthy. Power can be used for normal loads.';
+    }
+    el('recAction').textContent = action;
+    el('recReason').textContent = reason;
+    return action;
+  }
+
+  /* ============ AI: LOAD MANAGEMENT ============ */
+  function aiManageLoads(){
+    const b = state.battery;
+    let msg = '';
+    if(b < 15){
+      if(state.loads.harbour.on){ state.loads.harbour.on = false; msg = 'AI Action: Harbour Light turned OFF — battery critically low, saving power for the clinic refrigerator.'; }
+      else if(state.loads.pump.on){ state.loads.pump.on = false; msg = 'AI Action: Water Pump turned OFF — battery critically low, protecting emergency loads.'; }
+      if(state.loads.deco.on){ state.loads.deco.on = false; if(!msg) msg = 'AI Action: Decorative Light turned OFF to save power for the clinic refrigerator.'; }
+    } else if(b < 30){
+      if(state.loads.deco.on){ state.loads.deco.on = false; msg = 'AI Action: Decorative Light turned OFF to save power for the clinic refrigerator.'; }
+    }
+    if(msg){
+      el('aiLoadLog').textContent = msg;
+      renderLoads();
+    } else if(b > 60){
+      el('aiLoadLog').textContent = 'AI Action: Power is available. All loads may run normally.';
+    }
+  }
+
+  /* ============ MAIN TICK ============ */
+  function tick(){
+    state.t += 1;
+    const h = state.waveHeight, speed = state.waveSpeed, freq = state.waveFreq;
+    const noise = (Math.random()-0.5)*0.12;
+
+    const power = computeInstantPower(h, speed, freq, noise);
+    const voltage = 12 + (power/650)*36;
+    const current = voltage>0 ? power/voltage : 0;
+
+    state.power = power; state.voltage = voltage; state.current = current;
+    state.totalEnergyWh += power/3600;
+
+    // battery balance
+    const loadWatts = Object.values(state.loads).reduce((s,l)=> s + (l.on ? l.watt : 0), 0);
+    const netW = power - loadWatts;
+    state.battery += (netW/3600/BATTERY_CAPACITY_WH)*100;
+    state.battery = Math.max(0, Math.min(100, state.battery));
+
+    // history
+    state.waveHistory.push(h); if(state.waveHistory.length>20) state.waveHistory.shift();
+    state.powerHistory.push(power); if(state.powerHistory.length>20) state.powerHistory.shift();
+    state.powerTrend.push(power); if(state.powerTrend.length>30) state.powerTrend.shift();
+
+    // AI
+    updatePrediction();
+    const predAvg = (parseFloat(el('pred10').textContent)||power + parseFloat(el('pred20').textContent||power) + parseFloat(el('pred30').textContent||power))/1;
+    const avgOfPreds = [el('pred10'),el('pred20'),el('pred30')].map(e=>parseFloat(e.textContent)||power);
+    const predictedAvg = avgOfPreds.reduce((a,b)=>a+b,0)/avgOfPreds.length;
+    updateBatteryRecommendation(predictedAvg);
+    aiManageLoads();
+    evaluateAlertFromWave();
+
+    renderSensors();
+    updateCharts();
+  }
+
+  function renderSensors(){
+    el('rHeight').innerHTML = state.waveHeight.toFixed(2)+'<span class="unit">m</span>';
+    el('rFreq').innerHTML = state.waveFreq.toFixed(2)+'<span class="unit">Hz</span>';
+    el('rSpeed').innerHTML = state.waveSpeed+'<span class="unit">/10</span>';
+    el('rVolt').innerHTML = state.voltage.toFixed(1)+'<span class="unit">V</span>';
+    el('rCurrent').innerHTML = state.current.toFixed(1)+'<span class="unit">A</span>';
+    el('rPower').innerHTML = Math.round(state.power)+'<span class="unit">W</span>';
+    el('rEnergy').innerHTML = state.totalEnergyWh.toFixed(1)+'<span class="unit">Wh</span>';
+    el('rBattery').innerHTML = Math.round(state.battery)+'<span class="unit">%</span>';
+
+    el('batteryFill').style.width = state.battery+'%';
+    el('batteryPctBig').textContent = Math.round(state.battery)+'%';
+
+    const healthBadge = el('sysHealthBadge');
+    healthBadge.textContent = 'System health: '+state.systemHealth+'%';
+    healthBadge.className = 'health-badge ' + (state.systemHealth>80?'health-normal':state.systemHealth>40?'health-warning':'health-critical');
+  }
+
+  /* ============ SLIDER EVENTS ============ */
+  function readSliders(){
+    state.waveHeight = parseFloat(waveHeightIn.value);
+    state.waveSpeed = parseFloat(waveSpeedIn.value);
+    state.waveFreq = parseFloat(waveFreqIn.value);
+    el('waveHeightVal').textContent = state.waveHeight.toFixed(2)+' m';
+    el('waveSpeedVal').textContent = state.waveSpeed;
+    el('waveFreqVal').textContent = state.waveFreq.toFixed(2)+' Hz';
+    if(!state.running){
+      // preview instant power even when paused
+      state.power = computeInstantPower(state.waveHeight, state.waveSpeed, state.waveFreq, 0);
+      state.voltage = 12 + (state.power/650)*36;
+      state.current = state.voltage>0 ? state.power/state.voltage : 0;
+      renderSensors();
+    }
+  }
+  [waveHeightIn, waveSpeedIn, waveFreqIn].forEach(inp=> inp.addEventListener('input', readSliders));
+
+  /* ============ START / PAUSE / RESET ============ */
+  function startSim(){
+    if(state.running) return;
+    state.running = true;
+    startBtn.disabled = true; pauseBtn.disabled = false;
+    updateFlowStrip();
+    timer = setInterval(tick, 1000);
+    tick();
+  }
+  function pauseSim(){
+    state.running = false;
+    startBtn.disabled = false; pauseBtn.disabled = true;
+    updateFlowStrip();
+    clearInterval(timer);
+  }
+  function resetSim(){
+    pauseSim();
+    state.t=0; state.power=0; state.voltage=0; state.current=0;
+    state.totalEnergyWh=0; state.battery=50;
+    state.waveHistory=[]; state.powerHistory=[]; state.powerTrend=[];
+    state.systemHealth=100; state.fault='normal'; state.urgency='Normal';
+    Object.values(state.loads).forEach(l=> l.on = true);
+    renderLoads();
+    waveHeightIn.value=0.4; waveSpeedIn.value=5; waveFreqIn.value=0.20;
+    readSliders();
+    renderSensors();
+    updateCharts();
+    el('pred10').textContent='-- W'; el('pred20').textContent='-- W'; el('pred30').textContent='-- W';
+    el('predConf').textContent='--%';
+    el('predNote').textContent='Start the simulation to see live predictions.';
+    setFault('normal');
+    el('aiLoadLog').textContent='';
+    setAlertLevel('safe', {silent:true});
+    el('alertLog').textContent='';
+  }
+  startBtn.addEventListener('click', startSim);
+  pauseBtn.addEventListener('click', pauseSim);
+  resetBtn.addEventListener('click', resetSim);
+
+  /* ============ FAULT DETECTION ============ */
+  const faultData = {
+    normal:   { health:100, urgency:'Normal',   action:'Everything is working normally. No action needed.' },
+    sensor:   { health:70,  urgency:'Warning',  action:'Check ultrasonic sensor connection.' },
+    voltage:  { health:55,  urgency:'Warning',  action:'Wave energy is low or generator output is reduced.' },
+    motor:    { health:35,  urgency:'Critical', action:'Inspect mechanical movement and generator coupling.' },
+    overheat: { health:20,  urgency:'Critical', action:'Stop charging and allow the battery to cool.' }
+  };
+  function setFault(key){
+    const f = faultData[key];
+    state.fault = key; state.systemHealth = f.health; state.urgency = f.urgency;
+
+    document.querySelectorAll('#faultButtons button').forEach(b=> b.classList.toggle('active-state', b.dataset.fault===key));
+
+    const hBadge = el('faultHealthBadge');
+    hBadge.textContent = 'Health: '+f.health+'%';
+    hBadge.className = 'health-badge ' + (f.health>80?'health-normal':f.health>40?'health-warning':'health-critical');
+
+    const uBadge = el('urgencyBadge');
+    uBadge.textContent = 'Urgency: '+f.urgency;
+    uBadge.className = 'health-badge ' + (f.urgency==='Normal'?'health-normal':f.urgency==='Warning'?'health-warning':'health-critical');
+
+    el('faultAction').textContent = f.action;
+
+    if(key!=='normal'){
+      const log = el('faultLog');
+      const entry = document.createElement('div');
+      const time = new Date().toLocaleTimeString();
+      entry.innerHTML = `<span class="time">${time}</span>${f.urgency.toUpperCase()} — ${f.action}`;
+      log.prepend(entry);
+    }
+    renderSensors();
+  }
+  document.querySelectorAll('#faultButtons button').forEach(b=>{
+    b.addEventListener('click', ()=> setFault(b.dataset.fault));
+  });
+
+  /* ============ COASTAL ALERT / HIGH-WAVE BUZZER ============ */
+  const alertData = {
+    safe:    { badge:'SAFE',    label:'All Clear',        desc:'Wave height is normal. No coastal warning is active. The buzzer will sound automatically if waves rise sharply.' },
+    watch:   { badge:'WATCH',   label:'Wave Watch',        desc:'Waves are getting bigger than usual. Keep an eye on conditions near the shore.' },
+    warning: { badge:'WARNING', label:'High Wave Warning', desc:'Waves are dangerously high. The buzzer is sounding — move away from the beach and low-lying shore areas.' },
+    danger:  { badge:'DANGER',  label:'Tsunami / Extreme Wave Danger', desc:'Extreme wave conditions detected. Evacuate the coastline immediately and move to higher ground.' }
+  };
+  const sirenEl = el('sirenEl'), alertBadgeEl = el('alertBadge'), alertLevelTextEl = el('alertLevelText'), alertDescEl = el('alertDesc');
+  const buzzerMuteSwitch = el('buzzerMuteSwitch'), buzzerMuteLabel = el('buzzerMuteLabel');
+
+  let audioCtx = null;
+  let alarmTimer = null;
+  function getAudioCtx(){
+    try{
+      if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if(audioCtx.state === 'suspended') audioCtx.resume();
+      return audioCtx;
+    }catch(e){ return null; }
+  }
+  function beep(freq, durationMs){
+    const ctx = getAudioCtx();
+    if(!ctx) return;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'square';
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.18, ctx.currentTime + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + durationMs/1000);
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + durationMs/1000 + 0.02);
+  }
+  function stopAlarmLoop(){
+    if(alarmTimer){ clearInterval(alarmTimer); alarmTimer = null; }
+  }
+  function startAlarmLoop(level){
+    stopAlarmLoop();
+    if(state.alertMuted) return;
+    const pattern = level==='danger' ? { freq:920, gap:350 } : { freq:680, gap:650 };
+    beep(pattern.freq, 220);
+    alarmTimer = setInterval(()=> beep(pattern.freq, 220), pattern.gap);
+  }
+  function logAlertEvent(level, text){
+    const log = el('alertLog');
+    const entry = document.createElement('div');
+    const time = new Date().toLocaleTimeString();
+    entry.innerHTML = `<span class="time">${time}</span>${text}`;
+    log.prepend(entry);
+  }
+  function setAlertLevel(level, opts){
+    opts = opts || {};
+    const changed = state.alertLevel !== level;
+    state.alertLevel = level;
+    const d = alertData[level];
+
+    sirenEl.className = 'siren' + (level!=='safe' ? ' '+level : '');
+    alertBadgeEl.textContent = d.badge;
+    alertBadgeEl.className = 'alert-badge alert-'+level;
+    alertLevelTextEl.textContent = d.label;
+    alertLevelTextEl.style.color = level==='safe' ? 'var(--green)' : level==='watch' ? 'var(--yellow)' : 'var(--red)';
+    alertDescEl.textContent = d.desc;
+
+    document.querySelectorAll('.zone-dot').forEach(z=>{
+      z.className = 'zone-dot' + (level!=='safe' ? ' '+level : '');
+    });
+
+    if(sceneEl) sceneEl.classList.toggle('flash-danger', level==='danger');
+
+    if(level==='warning' || level==='danger'){
+      startAlarmLoop(level);
+    } else {
+      stopAlarmLoop();
+    }
+
+    if(changed && !opts.silent){
+      const msg = level==='safe' ? 'Alert cleared — conditions back to normal.' : `${d.badge} — ${d.desc}`;
+      logAlertEvent(level, msg);
+    }
+  }
+  function evaluateAlertFromWave(){
+    if(state.waveHistory.length < 2) return;
+    const h = state.waveHeight;
+    const prev = state.waveHistory[state.waveHistory.length-2];
+    const rise = h - prev; // how fast waves are rising per tick
+    let level = 'safe';
+    if(h >= 0.95 || rise >= 0.28) level = 'danger';
+    else if(h >= 0.8 || rise >= 0.18) level = 'warning';
+    else if(h >= 0.6 || rise >= 0.10) level = 'watch';
+    if(level !== state.alertLevel) setAlertLevel(level);
+  }
+  buzzerMuteSwitch.addEventListener('click', ()=>{
+    state.alertMuted = !state.alertMuted;
+    buzzerMuteSwitch.classList.toggle('on', !state.alertMuted);
+    buzzerMuteLabel.textContent = state.alertMuted ? 'Muted' : 'On';
+    if(state.alertMuted) stopAlarmLoop();
+    else if(state.alertLevel==='warning' || state.alertLevel==='danger') startAlarmLoop(state.alertLevel);
+  });
+  document.querySelectorAll('[data-testalert]').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      getAudioCtx(); // unlock audio on user gesture
+      setAlertLevel(b.dataset.testalert);
+    });
+  });
+
+  /* ============ DIGITAL TWIN SCENARIOS ============ */
+  function applyScenario(key){
+    if(!state.running) startSim();
+    if(key==='calm'){
+      waveHeightIn.value=0.15; waveSpeedIn.value=2; waveFreqIn.value=0.08;
+      setFault('normal');
+    } else if(key==='normal'){
+      waveHeightIn.value=0.45; waveSpeedIn.value=5; waveFreqIn.value=0.20;
+      setFault('normal');
+    } else if(key==='rough'){
+      waveHeightIn.value=0.95; waveSpeedIn.value=9; waveFreqIn.value=0.42;
+      setFault('normal');
+    } else if(key==='lowbatt'){
+      waveHeightIn.value=0.3; waveSpeedIn.value=4; waveFreqIn.value=0.15;
+      state.battery = 12;
+      setFault('normal');
+    } else if(key==='genfault'){
+      waveHeightIn.value=0.2; waveSpeedIn.value=3; waveFreqIn.value=0.1;
+      setFault('motor');
+    }
+    readSliders();
+    tick();
+  }
+  document.querySelectorAll('[data-scenario]').forEach(b=>{
+    b.addEventListener('click', ()=> applyScenario(b.dataset.scenario));
+  });
+
+  /* ============ REPORT ============ */
+  function buildReportText(){
+    const cond = el('predCondition').textContent;
+    return `WAVEWISE AI — DEMO REPORT
+Generated: ${new Date().toLocaleString()}
+================================================
+
+WAVE CONDITION
+  Height:      ${state.waveHeight.toFixed(2)} m
+  Frequency:   ${state.waveFreq.toFixed(2)} Hz
+  Speed:       ${state.waveSpeed}/10
+  Predicted condition: ${cond}
+
+POWER OUTPUT
+  Voltage:           ${state.voltage.toFixed(1)} V
+  Current:           ${state.current.toFixed(1)} A
+  Power output:      ${Math.round(state.power)} W
+  Total energy so far:${state.totalEnergyWh.toFixed(1)} Wh
+
+BATTERY
+  Level: ${Math.round(state.battery)}%
+  AI recommendation: ${el('recAction').textContent}
+  Reason: ${el('recReason').textContent}
+
+ACTIVE LOADS
+${Object.values(state.loads).map(l=> `  - ${l.name}: ${l.on ? 'ON' : 'OFF'} (${l.watt} W)`).join('\n')}
+
+SYSTEM HEALTH
+  Health: ${state.systemHealth}%
+  Fault status: ${state.fault==='normal' ? 'No fault' : state.fault}
+  Urgency: ${state.urgency}
+  Suggested action: ${el('faultAction').textContent}
+
+AI PREDICTION
+  10s: ${el('pred10').textContent}   20s: ${el('pred20').textContent}   30s: ${el('pred30').textContent}
+  Confidence: ${el('predConf').textContent}
+
+COASTAL ALERT
+  Level: ${el('alertBadge').textContent}
+  Status: ${el('alertDesc').textContent}
+  Buzzer: ${state.alertMuted ? 'Muted' : 'On'}
+
+================================================
+Educational Prototype — Simulated Data
+`;
+  }
+  el('genReportBtn').addEventListener('click', ()=>{
+    const box = el('reportBox');
+    box.style.display = 'block';
+    box.textContent = buildReportText();
+    el('downloadReportBtn').disabled = false;
+  });
+  el('downloadReportBtn').addEventListener('click', ()=>{
+    const blob = new Blob([buildReportText()], {type:'text/plain'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'wavewise-demo-report.txt';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+
+  /* ============ Q&A BUTTONS ============ */
+  const answers = {
+    power: ()=> `Current power output is ${Math.round(state.power)} watts, at ${state.voltage.toFixed(1)} volts and ${state.current.toFixed(1)} amps.`,
+    battery: ()=> `The battery is at ${Math.round(state.battery)} percent.`,
+    recommend: ()=> `AI recommendation: ${el('recAction').textContent}. ${el('recReason').textContent}`,
+    health: ()=> `System health is ${state.systemHealth}% (${state.urgency}). ${state.systemHealth>80 ? 'The system is healthy.' : 'The system needs attention — ' + el('faultAction').textContent}`,
+    alert: ()=> state.alertLevel==='safe' ? 'No coastal alert right now. Wave height is within the normal range.' : `Yes — current level is ${el('alertBadge').textContent}. ${el('alertDesc').textContent}`
+  };
+  document.querySelectorAll('[data-q]').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      const box = el('answerBox');
+      box.style.display = 'block';
+      box.textContent = answers[b.dataset.q]();
+    });
+  });
+
+  /* ============ INIT ============ */
+  readSliders();
+  renderSensors();
+  updateCharts();
+  updateFlowStrip();
+  setFault('normal');
+  setAlertLevel('safe', {silent:true});
+
+})();
+</script>
+<a class="manager-console-link" href="file:///C:/Users/LENOVO/Documents/Codex/2026-08-17/referenced-chatgpt-conversation-this-is-an/outputs/wavewise-manager/index.html" target="_blank" rel="noopener" title="Open the AI Based Ocean Wave Simulation manager console">📊 Open Manager Console ↗</a>
+</body>
+</html>
